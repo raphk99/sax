@@ -96,18 +96,30 @@ function stopPlayback() {
   startedAtPerfMs = null
   activeIdx.value = null
   stopRaf()
+  
+  // Close and reset audio context to truly stop all scheduled notes
+  // This prevents overlapping tracks when restarting playback
+  if (audioCtx.value) {
+    void audioCtx.value.close()
+    audioCtx.value = null
+    instrument.value = null
+  }
 }
 
 async function play() {
   if (!parseResult.value) return
+  
+  // Stop any existing playback to prevent overlapping tracks
+  if (isPlaying.value) {
+    stopPlayback()
+  }
+  
   await ensureAudio()
 
-  // If already playing, restart from current playhead.
   const nowCtx = audioCtx.value!.currentTime
   const startOffset = playheadSec.value
 
-  // Schedule each note using SoundFont player.
-  // This is a simple “fire and forget” schedule; stop/seek is handled by restarting.
+  // Schedule each note using SoundFont player
   for (const ev of parseResult.value.events) {
     const when = nowCtx + Math.max(0, ev.t0_sec - startOffset)
     if (ev.t0_sec + ev.dur_sec <= startOffset) continue
@@ -132,6 +144,14 @@ function pause() {
   )
   playheadSec.value = t
   stopPlayback()
+}
+
+function togglePlayPause() {
+  if (isPlaying.value) {
+    pause()
+  } else {
+    void play()
+  }
 }
 
 function seek(deltaSec: number) {
@@ -193,8 +213,9 @@ onBeforeUnmount(() => {
       </button>
 
       <div class="transport">
-        <button type="button" class="ghost" :disabled="!parseResult || isParsing" @click="play">Play</button>
-        <button type="button" class="ghost" :disabled="!parseResult || isParsing" @click="pause">Pause</button>
+        <button type="button" class="ghost" :disabled="!parseResult || isParsing" @click="togglePlayPause">
+          {{ isPlaying ? 'Pause' : 'Play' }}
+        </button>
         <button type="button" class="ghost" :disabled="!parseResult || isParsing" @click="seek(-2)">-2s</button>
         <button type="button" class="ghost" :disabled="!parseResult || isParsing" @click="seek(2)">+2s</button>
         <span class="time" v-if="parseResult">t={{ playheadSec.toFixed(2) }}s</span>

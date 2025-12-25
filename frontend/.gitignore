@@ -22,3 +22,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Playwright
+/test-results/
+/playwright-report/
+/playwright/.cache/
+backend/app/musicxml/__pycache__/
+backend/app/sax/__pycache__/
+backend/app/tests/__pycache__/

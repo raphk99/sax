@@ -71,51 +71,82 @@ def is_supported_written_midi(midi_written: int) -> bool:
 # MVP fingering table (written pitch for alto sax).
 #
 # Notes:
-# - This is a pragmatic “standard fingering” mapping to drive the visualization.
+# - This is a pragmatic "standard fingering" mapping to drive the visualization.
 # - Real sax fingerings have alternates; we can extend the API later to return
 #   multiple options per pitch and let the user select.
+# - Based on standard Eb Alto Saxophone fingering chart
 _FINGERINGS: Dict[int, Fingering] = {
-    # Low register (written Bb3..B3) - simplified LH+RH stack + RH pinky for low notes.
-    # Written Bb3 (58): B fingering + lowBb (common)
+    # Low register (written Bb3..C#4)
+    # Written Bb3 (58): All 6 main keys + low Bb key
     58: _pressed(KeyId.lh1, KeyId.lh2, KeyId.lh3, KeyId.rh1, KeyId.rh2, KeyId.rh3, KeyId.lowBb),
-    # Written B3 (59)
+    # Written B3 (59): All 6 main keys + low B key
     59: _pressed(KeyId.lh1, KeyId.lh2, KeyId.lh3, KeyId.rh1, KeyId.rh2, KeyId.rh3, KeyId.lowB),
-    # Written C4 (60): typically all main keys up (but sax has “C” with some combinations);
-    # for visualization MVP we keep it all-up.
-    60: _pressed(),
-    # Written C#4 (61): add lowCsharp (simplified)
-    61: _pressed(KeyId.lowCsharp),
+    # Written C4 (60): All 6 main keys + low C key (or can be all keys up for some saxes)
+    60: _pressed(KeyId.lh1, KeyId.lh2, KeyId.lh3, KeyId.rh1, KeyId.rh2, KeyId.rh3, KeyId.lowC),
+    # Written C#4 (61): lh1, lh2, lh3, rh1, rh2, rh3 + low C# key
+    61: _pressed(KeyId.lh1, KeyId.lh2, KeyId.lh3, KeyId.rh1, KeyId.rh2, KeyId.rh3, KeyId.lowCsharp),
 
-    # Middle register (written D4..G4)
-    62: _pressed(KeyId.lh1, KeyId.lh2, KeyId.lh3, KeyId.rh1, KeyId.rh2, KeyId.rh3),  # D4
-    63: _pressed(KeyId.lh1, KeyId.lh2, KeyId.lh3, KeyId.rh1, KeyId.rh2, KeyId.sideEb),  # Eb4 (simplified)
-    64: _pressed(KeyId.lh1, KeyId.lh2, KeyId.lh3, KeyId.rh1, KeyId.rh2),  # E4
-    65: _pressed(KeyId.lh1, KeyId.lh2, KeyId.lh3, KeyId.rh1),  # F4
-    66: _pressed(KeyId.lh1, KeyId.lh2, KeyId.lh3, KeyId.rh1, KeyId.sideEb),  # F#4 (approx)
-    67: _pressed(KeyId.lh1, KeyId.lh2),  # G4
-    68: _pressed(KeyId.lh1, KeyId.lh2, KeyId.gSharp),  # Ab4/G#4
-    69: _pressed(KeyId.lh1),  # A4
-    70: _pressed(KeyId.lh1, KeyId.bisBb),  # Bb4 (bis)
-    71: _pressed(KeyId.lh1, KeyId.lh2),  # B4
+    # Middle register (written D4..C5)
+    # D4 (62): All 6 main keys
+    62: _pressed(KeyId.lh1, KeyId.lh2, KeyId.lh3, KeyId.rh1, KeyId.rh2, KeyId.rh3),
+    # Eb4 (63): lh1, lh2, lh3, rh1, rh2 + side Eb
+    63: _pressed(KeyId.lh1, KeyId.lh2, KeyId.lh3, KeyId.rh1, KeyId.rh2, KeyId.sideEb),
+    # E4 (64): lh1, lh2, lh3, rh1, rh2
+    64: _pressed(KeyId.lh1, KeyId.lh2, KeyId.lh3, KeyId.rh1, KeyId.rh2),
+    # F4 (65): lh1, lh2, lh3, rh1
+    65: _pressed(KeyId.lh1, KeyId.lh2, KeyId.lh3, KeyId.rh1),
+    # F#4 (66): lh1, lh2, lh3 + side Eb (standard fingering)
+    66: _pressed(KeyId.lh1, KeyId.lh2, KeyId.lh3, KeyId.sideEb),
+    # G4 (67): lh1, lh2, lh3
+    67: _pressed(KeyId.lh1, KeyId.lh2, KeyId.lh3),
+    # Ab4/G#4 (68): lh1, lh2, lh3 + G# key
+    68: _pressed(KeyId.lh1, KeyId.lh2, KeyId.lh3, KeyId.gSharp),
+    # A4 (69): lh1, lh2
+    69: _pressed(KeyId.lh1, KeyId.lh2),
+    # Bb4 (70): lh1 + bis Bb OR lh1 + side Bb (bis shown here)
+    70: _pressed(KeyId.lh1, KeyId.bisBb),
+    # B4 (71): lh1, lh2
+    71: _pressed(KeyId.lh1, KeyId.lh2),
+    # C5 (72): lh1
+    72: _pressed(KeyId.lh1),
+    # C#5 (73): lh1 + side Bb (or lh1 + low C#)
+    73: _pressed(KeyId.lh1, KeyId.sideBb),
 
-    # Upper register (written C5..F5) use octave + base fingerings
-    72: _pressed(KeyId.lh1, KeyId.lh2, KeyId.lh3),  # C5
-    73: _pressed(KeyId.lh1, KeyId.lh2, KeyId.lh3, KeyId.lowCsharp),  # C#5
-    74: _pressed(KeyId.octave, KeyId.lh1, KeyId.lh2, KeyId.lh3, KeyId.rh1, KeyId.rh2, KeyId.rh3),  # D5
-    75: _pressed(KeyId.octave, KeyId.lh1, KeyId.lh2, KeyId.lh3, KeyId.rh1, KeyId.rh2, KeyId.sideEb),  # Eb5
-    76: _pressed(KeyId.octave, KeyId.lh1, KeyId.lh2, KeyId.lh3, KeyId.rh1, KeyId.rh2),  # E5
-    77: _pressed(KeyId.octave, KeyId.lh1, KeyId.lh2, KeyId.lh3, KeyId.rh1),  # F5
-    78: _pressed(KeyId.octave, KeyId.lh1, KeyId.lh2, KeyId.lh3, KeyId.rh1, KeyId.sideEb),  # F#5 (approx)
-    79: _pressed(KeyId.octave, KeyId.lh1, KeyId.lh2),  # G5
-    80: _pressed(KeyId.octave, KeyId.lh1, KeyId.lh2, KeyId.gSharp),  # Ab5/G#5
-    81: _pressed(KeyId.octave, KeyId.lh1),  # A5
-    82: _pressed(KeyId.octave, KeyId.lh1, KeyId.bisBb),  # Bb5 (bis)
-    83: _pressed(KeyId.octave, KeyId.lh1, KeyId.lh2),  # B5
+    # Upper register with octave key (written D5..C6)
+    # D5 (74): octave + all 6 main keys
+    74: _pressed(KeyId.octave, KeyId.lh1, KeyId.lh2, KeyId.lh3, KeyId.rh1, KeyId.rh2, KeyId.rh3),
+    # Eb5 (75): octave + lh1, lh2, lh3, rh1, rh2 + side Eb
+    75: _pressed(KeyId.octave, KeyId.lh1, KeyId.lh2, KeyId.lh3, KeyId.rh1, KeyId.rh2, KeyId.sideEb),
+    # E5 (76): octave + lh1, lh2, lh3, rh1, rh2
+    76: _pressed(KeyId.octave, KeyId.lh1, KeyId.lh2, KeyId.lh3, KeyId.rh1, KeyId.rh2),
+    # F5 (77): octave + lh1, lh2, lh3, rh1
+    77: _pressed(KeyId.octave, KeyId.lh1, KeyId.lh2, KeyId.lh3, KeyId.rh1),
+    # F#5 (78): octave + lh1, lh2, lh3 + side Eb
+    78: _pressed(KeyId.octave, KeyId.lh1, KeyId.lh2, KeyId.lh3, KeyId.sideEb),
+    # G5 (79): octave + lh1, lh2, lh3
+    79: _pressed(KeyId.octave, KeyId.lh1, KeyId.lh2, KeyId.lh3),
+    # Ab5/G#5 (80): octave + lh1, lh2, lh3 + G# key
+    80: _pressed(KeyId.octave, KeyId.lh1, KeyId.lh2, KeyId.lh3, KeyId.gSharp),
+    # A5 (81): octave + lh1, lh2
+    81: _pressed(KeyId.octave, KeyId.lh1, KeyId.lh2),
+    # Bb5 (82): octave + lh1 + bis Bb
+    82: _pressed(KeyId.octave, KeyId.lh1, KeyId.bisBb),
+    # B5 (83): octave + lh1, lh2
+    83: _pressed(KeyId.octave, KeyId.lh1, KeyId.lh2),
+    # C6 (84): octave + lh1
+    84: _pressed(KeyId.octave, KeyId.lh1),
+    # C#6 (85): octave + lh1 + side Bb
+    85: _pressed(KeyId.octave, KeyId.lh1, KeyId.sideBb),
 
-    # Palm-key region (very simplified for MVP)
-    86: _pressed(KeyId.octave, KeyId.palmD),  # D6
-    87: _pressed(KeyId.octave, KeyId.palmEb),  # Eb6
-    89: _pressed(KeyId.octave, KeyId.palmF),  # F6
+    # Palm-key region (high altissimo)
+    # D6 (86): octave + palm D (+ lh1, lh2, lh3 for support)
+    86: _pressed(KeyId.octave, KeyId.lh1, KeyId.lh2, KeyId.lh3, KeyId.palmD),
+    # Eb6 (87): octave + palm Eb
+    87: _pressed(KeyId.octave, KeyId.lh1, KeyId.lh2, KeyId.lh3, KeyId.palmEb),
+    # E6 (88): octave + palm Eb + lh2
+    88: _pressed(KeyId.octave, KeyId.lh1, KeyId.lh2, KeyId.palmEb),
+    # F6 (89): octave + palm F
+    89: _pressed(KeyId.octave, KeyId.lh1, KeyId.lh2, KeyId.lh3, KeyId.palmF),
 }
 
 
