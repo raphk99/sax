@@ -2,7 +2,12 @@
 import { computed, onBeforeUnmount, ref } from 'vue'
 import ScoreViewer from './components/ScoreViewer.vue'
 import SaxFingering from './components/SaxFingering.vue'
-import Soundfont from 'soundfont-player'
+import SaxSettings from './components/SaxSettings.vue'
+import {
+  SaxophoneSynthesizer,
+  DEFAULT_SAX_CONFIG,
+  type SaxSynthConfig,
+} from './lib/saxSynth'
 
 import { findActiveEventIndex, type NoteEvent, currentTimeSec } from './lib/timeline'
 
@@ -35,20 +40,36 @@ const currentKeyStates = computed(() => {
 })
 
 const audioCtx = ref<AudioContext | null>(null)
-const instrument = ref<any>(null)
+const synth = ref<SaxophoneSynthesizer | null>(null)
 const isPlaying = ref(false)
 const playheadSec = ref(0)
 const activeIdx = ref<number | null>(null)
 let rafId: number | null = null
 let startedAtPerfMs: number | null = null
 
+// Settings panel state
+const showSettings = ref(false)
+const currentConfig = ref<SaxSynthConfig>({ ...DEFAULT_SAX_CONFIG })
+
 async function ensureAudio() {
   if (!audioCtx.value) audioCtx.value = new AudioContext()
   if (audioCtx.value.state !== 'running') await audioCtx.value.resume()
-  if (!instrument.value) {
-    // MVP: use acoustic grand piano until we add a sax SoundFont URL/config.
-    instrument.value = await Soundfont.instrument(audioCtx.value, 'acoustic_grand_piano')
+  if (!synth.value) {
+    synth.value = new SaxophoneSynthesizer(audioCtx.value, currentConfig.value)
   }
+}
+
+function handleConfigChange(newConfig: SaxSynthConfig) {
+  currentConfig.value = { ...newConfig }
+  if (synth.value) {
+    synth.value.config = { ...newConfig }
+  }
+}
+
+async function playTestNote(midiNote: number) {
+  await ensureAudio()
+  const now = audioCtx.value!.currentTime
+  synth.value!.playNote(midiNote, now, 0.5, 80)
 }
 
 function stopRaf() {
@@ -102,7 +123,7 @@ function stopPlayback() {
   if (audioCtx.value) {
     void audioCtx.value.close()
     audioCtx.value = null
-    instrument.value = null
+    synth.value = null
   }
 }
 
@@ -119,14 +140,11 @@ async function play() {
   const nowCtx = audioCtx.value!.currentTime
   const startOffset = playheadSec.value
 
-  // Schedule each note using SoundFont player
+  // Schedule each note using saxophone synthesizer
   for (const ev of parseResult.value.events) {
     const when = nowCtx + Math.max(0, ev.t0_sec - startOffset)
     if (ev.t0_sec + ev.dur_sec <= startOffset) continue
-    instrument.value.play(ev.midi_sounding, when, {
-      duration: ev.dur_sec,
-      gain: 0.25,
-    })
+    synth.value!.playNote(ev.midi_sounding, when, ev.dur_sec, 80)
   }
 
   isPlaying.value = true
@@ -136,8 +154,8 @@ async function play() {
 
 function pause() {
   if (!isPlaying.value) return
-  // SoundFont scheduling can't be unscheduled easily; MVP pause stops time tracking only.
-  // Better: use a MIDI scheduler that can stop nodes; we'll upgrade later.
+  // Note: Web Audio API nodes are scheduled and can't be easily unscheduled.
+  // Pause stops playback by closing the audio context.
   const t = currentTimeSec(
     { isPlaying: true, startedAtPerfMs, pausedAtSec: playheadSec.value },
     performance.now(),
@@ -198,8 +216,16 @@ onBeforeUnmount(() => {
 <template>
   <div class="page">
     <header class="topbar">
-      <div class="brand">Sax Fingering Visualizer</div>
-      <div class="hint">Upload MusicXML → render score → parse events/fingerings → (next) playback + animation</div>
+      <div class="topbarLeft">
+        <div class="brand">Sax Fingering Visualizer</div>
+        <div class="hint">Upload MusicXML → render score → parse events/fingerings → playback + animation</div>
+      </div>
+      <button class="settingsBtn" @click="showSettings = true" title="Synthesizer Settings">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M12 1v6m0 6v6m5.2-13.2l-4.2 4.2m0 6l4.2 4.2M23 12h-6m-6 0H1m13.2 5.2l-4.2-4.2m0-6l-4.2-4.2"></path>
+        </svg>
+      </button>
     </header>
 
     <section class="controls">
@@ -274,6 +300,27 @@ onBeforeUnmount(() => {
     <section>
       <SaxFingering :key-states="currentKeyStates" />
     </section>
+
+    <!-- Settings Panel Overlay -->
+    <Teleport to="body">
+      <Transition name="settings">
+        <div v-if="showSettings" class="settingsOverlay" @click="showSettings = false">
+          <div class="settingsSidebar" @click.stop>
+            <button class="closeBtn" @click="showSettings = false" title="Close">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+            <SaxSettings 
+              v-model="currentConfig" 
+              @update:model-value="handleConfigChange"
+              @play-note="playTestNote"
+            />
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -288,6 +335,13 @@ onBeforeUnmount(() => {
   gap: 16px;
 }
 .topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+.topbarLeft {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -349,6 +403,80 @@ button.ghost:disabled {
 .time {
   font-size: 12px;
   opacity: 0.75;
+}
+.settingsBtn {
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.08);
+  color: currentColor;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.settingsBtn:hover {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.3);
+  transform: rotate(30deg);
+}
+.settingsOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  justify-content: flex-end;
+}
+.settingsSidebar {
+  position: relative;
+  width: min(600px, 90vw);
+  height: 100vh;
+  background: rgba(20, 20, 30, 0.98);
+  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.closeBtn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 10;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.closeBtn:hover {
+  background: rgba(239, 68, 68, 0.3);
+  border-color: rgba(239, 68, 68, 0.5);
+}
+.settings-enter-active,
+.settings-leave-active {
+  transition: opacity 0.3s ease;
+}
+.settings-enter-active .settingsSidebar,
+.settings-leave-active .settingsSidebar {
+  transition: transform 0.3s ease;
+}
+.settings-enter-from,
+.settings-leave-to {
+  opacity: 0;
+}
+.settings-enter-from .settingsSidebar {
+  transform: translateX(100%);
+}
+.settings-leave-to .settingsSidebar {
+  transform: translateX(100%);
 }
 .error {
   padding: 12px;
@@ -429,12 +557,21 @@ button.ghost:disabled {
   .events td {
     border-bottom-color: rgba(0, 0, 0, 0.08);
   }
-  button.ghost {
+  button.ghost,
+  .settingsBtn {
     border-color: rgba(0, 0, 0, 0.1);
     background: rgba(255, 255, 255, 0.65);
   }
   .events tr.active td {
     background: rgba(59, 130, 246, 0.12);
+  }
+  .settingsSidebar {
+    background: rgba(250, 250, 250, 0.98);
+  }
+  .closeBtn {
+    border-color: rgba(0, 0, 0, 0.1);
+    background: rgba(255, 255, 255, 0.8);
+    color: #000;
   }
 }
 </style>
