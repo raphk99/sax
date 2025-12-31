@@ -28,32 +28,31 @@ function on(key: string): boolean {
           <line x1="120" y1="550" x2="120" y2="630" class="body-path" />
         </g>
 
-        <!-- Palm keys (top, small circles) - High register D, Eb, F -->
+        <!-- Palm keys (teardrop shape, positioned above LH1 on the right) -->
         <g class="palm-keys">
-          <circle
-            :class="['key', 'key-palm', { pressed: on('palmD') }]"
-            cx="90"
-            cy="50"
-            r="9"
-          >
-            <title>Palm D</title>
-          </circle>
-          <circle
+          <!-- Palm E (Eb) - Top -->
+          <path
             :class="['key', 'key-palm', { pressed: on('palmEb') }]"
-            cx="120"
-            cy="45"
-            r="9"
+            d="M 150 110 C 145 110 142 113 142 117 C 142 121 145 124 147 126 L 150 129 L 153 126 C 155 124 158 121 158 117 C 158 113 155 110 150 110 Z"
           >
             <title>Palm Eb</title>
-          </circle>
-          <circle
+          </path>
+          
+          <!-- Palm D - Middle right -->
+          <path
+            :class="['key', 'key-palm', { pressed: on('palmD') }]"
+            d="M 167 126 C 162 126 159 129 159 133 C 159 137 162 140 164 142 L 167 145 L 170 142 C 172 140 175 137 175 133 C 175 129 172 126 167 126 Z"
+          >
+            <title>Palm D</title>
+          </path>
+          
+          <!-- Palm F - Bottom -->
+          <path
             :class="['key', 'key-palm', { pressed: on('palmF') }]"
-            cx="150"
-            cy="50"
-            r="9"
+            d="M 150 142 C 145 142 142 145 142 149 C 142 153 145 156 147 158 L 150 161 L 153 158 C 155 156 158 153 158 149 C 158 145 155 142 150 142 Z"
           >
             <title>Palm F</title>
-          </circle>
+          </path>
         </g>
 
         <!-- Octave key (left side, small oval) -->
@@ -178,51 +177,49 @@ function on(key: string): boolean {
           </ellipse>
         </g>
 
-        <!-- Low pinky cluster (bottom spatulas - rightmost keys) -->
+        <!-- Low pinky cluster (positioned under LH3, right side) -->
         <g class="low-pinky-cluster">
-          <ellipse
+          <!-- Top half circle - Low C -->
+          <path
             :class="['key', 'key-spatula', { pressed: on('lowC') }]"
-            cx="70"
-            cy="600"
-            rx="10"
-            ry="15"
+            d="M 150 330 A 10 10 0 0 1 170 330 L 170 330 Z"
           >
             <title>Low C</title>
-          </ellipse>
-          <ellipse
-            :class="['key', 'key-spatula', { pressed: on('lowCsharp') }]"
-            cx="95"
-            cy="605"
-            rx="10"
-            ry="15"
-          >
-            <title>Low C#</title>
-          </ellipse>
-          <ellipse
+          </path>
+          
+          <!-- Left square - Low B -->
+          <rect
             :class="['key', 'key-spatula', { pressed: on('lowB') }]"
-            cx="120"
-            cy="608"
-            rx="10"
-            ry="15"
+            x="150"
+            y="332"
+            width="9"
+            height="12"
           >
             <title>Low B</title>
-          </ellipse>
-          <ellipse
+          </rect>
+          
+          <!-- Right square - Low C# -->
+          <rect
+            :class="['key', 'key-spatula', { pressed: on('lowCsharp') }]"
+            x="161"
+            y="332"
+            width="9"
+            height="12"
+          >
+            <title>Low C#</title>
+          </rect>
+          
+          <!-- Bottom half circle - Low Bb -->
+          <path
             :class="['key', 'key-spatula', { pressed: on('lowBb') }]"
-            cx="145"
-            cy="605"
-            rx="10"
-            ry="15"
+            d="M 150 346 A 10 10 0 0 0 170 346 L 170 346 Z"
           >
             <title>Low Bb</title>
-          </ellipse>
+          </path>
         </g>
 
         <!-- Key labels (optional, subtle) -->
         <g class="key-labels">
-          <text x="90" y="75" class="label">D</text>
-          <text x="120" y="70" class="label">Eb</text>
-          <text x="150" y="75" class="label">F</text>
           <text x="45" y="120" class="label">8va</text>
         </g>
       </svg>

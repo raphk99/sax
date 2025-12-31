@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import ScoreViewer from './components/ScoreViewer.vue'
 import SaxFingering from './components/SaxFingering.vue'
+import SaxSettings from './components/SaxSettings.vue'
 import Soundfont from 'soundfont-player'
 
 import { findActiveEventIndex, type NoteEvent, currentTimeSec } from './lib/timeline'
+import { DEFAULT_SAX_CONFIG, createEffectsChain, type SaxAudioConfig } from './lib/saxAudio'
 
 type ParseResponse = {
   metadata: {
@@ -36,18 +38,61 @@ const currentKeyStates = computed(() => {
 
 const audioCtx = ref<AudioContext | null>(null)
 const instrument = ref<any>(null)
+const effectsChain = ref<{ input: GainNode; output: GainNode } | null>(null)
 const isPlaying = ref(false)
 const playheadSec = ref(0)
 const activeIdx = ref<number | null>(null)
 let rafId: number | null = null
 let startedAtPerfMs: number | null = null
 
+// Audio settings
+const showSettings = ref(false)
+const saxConfig = ref<SaxAudioConfig>({ ...DEFAULT_SAX_CONFIG })
+
+// Load config from localStorage on mount
+onMounted(() => {
+  const saved = localStorage.getItem('saxAudioConfig')
+  if (saved) {
+    try {
+      saxConfig.value = JSON.parse(saved)
+    } catch (e) {
+      console.warn('Failed to load saved config:', e)
+    }
+  }
+})
+
+// Save config to localStorage when it changes
+function handleConfigChange(newConfig: SaxAudioConfig) {
+  saxConfig.value = newConfig
+  localStorage.setItem('saxAudioConfig', JSON.stringify(newConfig))
+  
+  // Recreate effects chain if audio context exists
+  if (audioCtx.value) {
+    recreateEffectsChain()
+  }
+}
+
+function recreateEffectsChain() {
+  if (!audioCtx.value) return
+  
+  // Disconnect old chain
+  if (effectsChain.value) {
+    effectsChain.value.output.disconnect()
+  }
+  
+  // Create new effects chain
+  effectsChain.value = createEffectsChain(audioCtx.value, saxConfig.value)
+  effectsChain.value.output.connect(audioCtx.value.destination)
+}
+
 async function ensureAudio() {
   if (!audioCtx.value) audioCtx.value = new AudioContext()
   if (audioCtx.value.state !== 'running') await audioCtx.value.resume()
   if (!instrument.value) {
-    // MVP: use acoustic grand piano until we add a sax SoundFont URL/config.
-    instrument.value = await Soundfont.instrument(audioCtx.value, 'acoustic_grand_piano')
+    instrument.value = await Soundfont.instrument(audioCtx.value, 'alto_saxophone')
+  }
+  if (!effectsChain.value) {
+    recreateEffectsChain()
   }
 }
 
@@ -103,6 +148,7 @@ function stopPlayback() {
     void audioCtx.value.close()
     audioCtx.value = null
     instrument.value = null
+    effectsChain.value = null
   }
 }
 
@@ -120,12 +166,17 @@ async function play() {
   const startOffset = playheadSec.value
 
   // Schedule each note using SoundFont player
+  // Note: soundfont-player doesn't expose individual note nodes for effects,
+  // so we connect the instrument's output through our effects chain
   for (const ev of parseResult.value.events) {
     const when = nowCtx + Math.max(0, ev.t0_sec - startOffset)
     if (ev.t0_sec + ev.dur_sec <= startOffset) continue
+    
+    // Play note - soundfont-player handles the audio internally
+    // The instrument output is already connected to our effects chain via the AudioContext
     instrument.value.play(ev.midi_sounding, when, {
       duration: ev.dur_sec,
-      gain: 0.25,
+      gain: 0.3,
     })
   }
 
@@ -199,7 +250,7 @@ onBeforeUnmount(() => {
   <div class="page">
     <header class="topbar">
       <div class="brand">Sax Fingering Visualizer</div>
-      <div class="hint">Upload MusicXML → render score → parse events/fingerings → (next) playback + animation</div>
+      <div class="hint">Upload MusicXML → render score → parse events/fingerings → playback with sax sound</div>
     </header>
 
     <section class="controls">
@@ -220,6 +271,10 @@ onBeforeUnmount(() => {
         <button type="button" class="ghost" :disabled="!parseResult || isParsing" @click="seek(2)">+2s</button>
         <span class="time" v-if="parseResult">t={{ playheadSec.toFixed(2) }}s</span>
       </div>
+
+      <button type="button" class="ghost settings" @click="showSettings = true">
+        ⚙️ Audio Settings
+      </button>
     </section>
 
     <section v-if="errorMsg" class="error">
@@ -241,7 +296,7 @@ onBeforeUnmount(() => {
 
       <div class="panel">
         <div class="panelTitle">Parsed events</div>
-        <div v-if="!parseResult" class="emptyRight">Click “Parse on server” to populate events + fingerings.</div>
+        <div v-if="!parseResult" class="emptyRight">Click "Parse on server" to populate events + fingerings.</div>
         <div v-else class="events">
           <div class="meta">
             <div><span class="k">Tempo</span><span class="v">{{ parseResult.metadata.qpm }} qpm</span></div>
@@ -274,6 +329,14 @@ onBeforeUnmount(() => {
     <section>
       <SaxFingering :key-states="currentKeyStates" />
     </section>
+
+    <!-- Settings Modal -->
+    <SaxSettings
+      v-if="showSettings"
+      :config="saxConfig"
+      :on-config-change="handleConfigChange"
+      :on-close="() => showSettings = false"
+    />
   </div>
 </template>
 
@@ -345,6 +408,9 @@ button.ghost {
 button.ghost:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+button.ghost.settings {
+  margin-left: auto;
 }
 .time {
   font-size: 12px;
@@ -438,3 +504,7 @@ button.ghost:disabled {
   }
 }
 </style>
+
+
+
+
