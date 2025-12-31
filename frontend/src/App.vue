@@ -8,6 +8,9 @@ import Soundfont from 'soundfont-player'
 import { findActiveEventIndex, type NoteEvent, currentTimeSec } from './lib/timeline'
 import { DEFAULT_SAX_CONFIG, createEffectsChain, type SaxAudioConfig } from './lib/saxAudio'
 
+// API base URL - uses environment variable in production, proxy in development
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
+
 type ParseResponse = {
   metadata: {
     qpm: number
@@ -227,7 +230,7 @@ async function parseOnServer() {
   try {
     const fd = new FormData()
     fd.append('file', file.value, file.value.name)
-    const resp = await fetch('/api/parse', { method: 'POST', body: fd })
+    const resp = await fetch(`${API_BASE_URL}/api/parse`, { method: 'POST', body: fd })
     if (!resp.ok) {
       const text = await resp.text()
       throw new Error(text || `HTTP ${resp.status}`)
