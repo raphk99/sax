@@ -9,6 +9,7 @@ from app.api.parse import router as parse_router
 def create_app() -> FastAPI:
     app = FastAPI(title="MusicXML to Alto Sax Fingering API", version="0.1.0")
 
+    # CORS configuration - must be added before routes
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[
@@ -19,6 +20,8 @@ def create_app() -> FastAPI:
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
+        expose_headers=["*"],  # Expose all headers to the client
+        max_age=3600,  # Cache preflight requests for 1 hour
     )
 
     app.include_router(parse_router, prefix="/api")
