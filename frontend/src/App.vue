@@ -8,8 +8,11 @@ import Soundfont from 'soundfont-player'
 import { findActiveEventIndex, type NoteEvent, currentTimeSec } from './lib/timeline'
 import { DEFAULT_SAX_CONFIG, createEffectsChain, type SaxAudioConfig } from './lib/saxAudio'
 
-// API base URL - uses environment variable in production, proxy in development
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
+// API base URL - injected by Vite at build time
+// In development: empty string (uses proxy)
+// In production: full backend URL
+declare const __API_BASE_URL__: string
+const API_BASE_URL = __API_BASE_URL__
 
 type ParseResponse = {
   metadata: {
