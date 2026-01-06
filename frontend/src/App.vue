@@ -92,7 +92,7 @@ async function ensureAudio() {
   if (!audioCtx.value) audioCtx.value = new AudioContext()
   if (audioCtx.value.state !== 'running') await audioCtx.value.resume()
   if (!instrument.value) {
-    instrument.value = await Soundfont.instrument(audioCtx.value, 'alto_saxophone')
+    instrument.value = await Soundfont.instrument(audioCtx.value, 'alto_saxophone' as any)
   }
   if (!effectsChain.value) {
     recreateEffectsChain()
