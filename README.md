@@ -32,15 +32,15 @@ VueApp->>VueApp: On tick, highlight note + update sax keys
 
 ## Implementation Status
 
-✅ **Backend Parse Endpoint**: FastAPI backend with `/api/parse` to accept MusicXML and return timed events + midiBase64 + metadata
+**Backend Parse Endpoint**: FastAPI backend with `/api/parse` to accept MusicXML and return timed events + midiBase64 + metadata -- DONE
 
-✅ **Fingering Mapping**: Alto sax fingering mapping (written pitch -> key states) with initial supported range and accidentals
+**Fingering Mapping**: Alto sax fingering mapping (written pitch -> key states) with initial supported range and accidentals -- DONE
 
-✅ **Frontend Score Viewer**: Vue UI with OpenSheetMusicDisplay to render MusicXML and provide a cursor
+**Frontend Score Viewer**: Vue UI with OpenSheetMusicDisplay to render MusicXML and provide a cursor -- DONE
 
-✅ **Frontend Audio Playback**: In-browser SoundFont playback and a timeline controller synced to backend events
+**Frontend Audio Playback**: In-browser SoundFont playback and a timeline controller synced to backend events -- DONE
 
-✅ **Frontend Fingering Visualization**: SVG alto sax fingering component driven from key-state timeline
+**Frontend Fingering Visualization**: SVG alto sax fingering component driven from key-state timeline -- DONE
 
 ## Implementation Details
 
@@ -103,10 +103,3 @@ VueApp->>VueApp: On tick, highlight note + update sax keys
 - `frontend/src/components/ScoreViewer.vue` - Score rendering component
 - `frontend/src/components/SaxFingering.vue` - Sax fingering visualization
 - `frontend/src/lib/timeline.ts` - Timeline controller for sync
-
-## MVP Acceptance Criteria
-
-- ✅ Upload a MusicXML melody.
-- ✅ Sheet music renders in the browser.
-- ✅ Press Play: audio plays via SoundFont, current note highlights, and sax fingering diagram updates in sync.
-- ✅ Works for a reasonable alto range and common accidentals.
